@@ -37,58 +37,51 @@
  * @package codon_core
  */
 
-include 'core/codon.config.php';
+/**
+ * @author Nabeel Shahzad <www.phpvms.net>
+ * @desc Admin panel home
+ */
+	
+define('ADMIN_PANEL', true);
+include '../core/codon.config.php';
 
-if(Config::Get('XDEBUG_BENCHMARK'))
+if(!Auth::LoggedIn())
 {
-	$memory_start = xdebug_memory_usage();
+	Debug::showCritical('Please login first');
+	die();
+}
+
+if(!PilotGroups::group_has_perm(Auth::$usergroups, ACCESS_ADMIN))
+{
+	Debug::showCritical('Unauthorized access');
+	die();
 }
 
 $BaseTemplate = new TemplateSet;
+$tplname = Config::Get('ADMIN_SKIN');
+if($tplname == '')
+	$tplname = 'layout';
 
-# Load the main skin
-$settings_file = SKINS_PATH.DS.CURRENT_SKIN . '.php';
+//load the main skin
+$settings_file = SITE_ROOT . '/admin/lib/'.$tplname.'/'.$tplname.'.php';
 if(file_exists($settings_file))
+{
 	include $settings_file;
-
-$BaseTemplate->template_path = SKINS_PATH;
+}
+	
+$BaseTemplate->template_path = SITE_ROOT . '/admin/lib/'.$tplname;
+$BaseTemplate->Set('title', SITE_NAME);
 
 Template::Set('MODULE_NAV_INC', $NAVBAR);
 Template::Set('MODULE_HEAD_INC', $HTMLHead);
 
-ob_start();
-MainController::RunAllActions();
-$page_content = ob_get_clean();
+$BaseTemplate->Show('header.tpl');
 
-$BaseTemplate->Set('title', MainController::$page_title .' - '.SITE_NAME);
-$BaseTemplate->Set('page_title', MainController::$page_title .' - '.SITE_NAME);
+flush();
 
-if(file_exists(SKINS_PATH.'/layout.tpl'))
-{
-	$BaseTemplate->Set('page_htmlhead', Template::Get('core_htmlhead.tpl', true));
-	$BaseTemplate->Set('page_htmlreq', Template::Get('core_htmlreq.tpl', true));
-	$BaseTemplate->Set('page_content', $page_content);
-	
-	$BaseTemplate->ShowTemplate('layout.tpl');
-}
-else
-{
-	# It's a template sammich!
-	$BaseTemplate->ShowTemplate('header.tpl');
-	echo $page_content;
-	$BaseTemplate->ShowTemplate('footer.tpl');
-}
+MainController::runAllActions();
+
+$BaseTemplate->Show('footer.tpl');
 
 # Force connection close
 DB::close();
-
-if(Config::Get('XDEBUG_BENCHMARK'))
-{
-	$run_time = xdebug_time_index();
-	$memory_end = xdebug_memory_usage();
-
-
-	echo 'TOTAL MEMORY: '.($memory_end - $memory_start).'<br />';
-	echo 'PEAK: '.xdebug_peak_memory_usage().'<br />';
-	echo 'RUN TIME: '.$run_time.'<br />';
-}

@@ -37,27 +37,25 @@
  * @package codon_core
  */
 
-/* This is for a popup box, or an AJAX call
-	Don't show the site header/footer
-*/
+/**
+ * @author Nabeel Shahzad <www.phpvms.net>
+ * @desc Handles AJAX calls
+ */
 
-define('SITE_ROOT', dirname(__FILE__));
-include 'core/codon.config.php';
+define('ADMIN_PANEL', true);
+
+include '../core/codon.config.php';
+
 error_reporting(E_ALL ^ E_NOTICE);
- 
-$BaseTemplate = new TemplateSet;
 
-//load the main skin
-$settings_file = SKINS_PATH . '/' . CURRENT_SKIN . '.php';
-if(file_exists($settings_file))
-	include $settings_file;
+if(!Auth::LoggedIn() || !PilotGroups::group_has_perm(Auth::$usergroups, ACCESS_ADMIN))
+{
+	Debug::showCritical('Unauthorized access!');
+	die();
+}
 
-$BaseTemplate->template_path = SKINS_PATH;
-
-Template::Set('MODULE_NAV_INC', $NAVBAR);
-Template::Set('MODULE_HEAD_INC', $HTMLHead);
-
-MainController::RunAllActions();
+Template::SetTemplatePath(dirname(__FILE__).'/templates');
+MainController::runAllActions();
 
 # Force connection close
 DB::close();
